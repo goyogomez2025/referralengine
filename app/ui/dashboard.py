@@ -2,7 +2,7 @@
 Referral Engine v1.1.0 — Yirra Care
 Professional NDIS Outreach Automation Platform.
 """
-import sys, subprocess, re, platform, time
+import os, sys, subprocess, re, platform, time
 from pathlib import Path
 import pandas as pd
 import streamlit as st
@@ -1565,6 +1565,8 @@ elif page == "  ⚙️   Settings":
                         st.code(out_txt.strip()[:400])
             if all_ok:
                 st.success("🎉 Update complete! Reloading app…")
+                # Restore cwd (git reset can leave it in a weird state)
+                os.chdir(str(ROOT))
                 # Flush the Python module cache for every app.* module so that
                 # the next Streamlit rerun imports the freshly-updated files.
                 for _mod_key in [k for k in sys.modules if k.startswith("app")]:

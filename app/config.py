@@ -1,8 +1,13 @@
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
-load_dotenv()
+# Resolve the .env path from this file's location so it always works
+# regardless of the current working directory (avoids find_dotenv crashes
+# after a git reset changes the process cwd in the frozen .app).
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=str(_ENV_FILE), override=False)
 
 
 def _bool(value: str | None, default: bool = False) -> bool:
