@@ -1581,15 +1581,18 @@ elif page == "  ⚙️   Settings":
                     if out_txt.strip():
                         st.code(out_txt.strip()[:400])
             if all_ok:
-                st.success("🎉 Update complete! Reloading app…")
-                # Restore cwd (git reset can leave it in a weird state)
                 os.chdir(str(ROOT))
-                # Flush the Python module cache for every app.* module so that
-                # the next Streamlit rerun imports the freshly-updated files.
-                for _mod_key in [k for k in sys.modules if k.startswith("app")]:
-                    del sys.modules[_mod_key]
-                time.sleep(2)
-                st.rerun()
+                # Read the real new version directly from the updated file on disk
+                try:
+                    new_ver = (ROOT / "version.txt").read_text().strip()
+                except Exception:
+                    new_ver = "latest"
+                st.success(f"🎉 **Update complete!** Now on **v{new_ver}** — reloading in 3 seconds…")
+                time.sleep(3)
+                # Full browser page reload — creates a completely fresh Streamlit session
+                # so the new version.txt and dashboard.py are picked up correctly.
+                import streamlit.components.v1 as _stc
+                _stc.html("<script>window.location.reload();</script>", height=0)
             else:
                 st.warning(
                     "⚠️ Update partially failed. "
