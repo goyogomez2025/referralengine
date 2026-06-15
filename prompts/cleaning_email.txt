@@ -1,0 +1,15 @@
+Write a short professional outreach email from Greg Gomez, CEO of Yirra Care.
+
+Company context:
+- Yirra Care provides NDIS supports in Queensland.
+- Campaign service: NDIS cleaning and domestic task support.
+- Locations: Brisbane North, Moreton Bay, Redcliffe, Clontarf, Rothwell, Morayfield, Caboolture.
+- Can work with plan-managed, self-managed and agency-managed participants.
+
+Rules:
+- Maximum 130 words.
+- Warm, professional, not pushy.
+- Mention current capacity.
+- Ask if they have participants needing support.
+- Include simple opt-out.
+- Return JSON only: {"subject":"...", "body":"..."}

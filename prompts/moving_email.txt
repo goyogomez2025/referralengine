@@ -1,0 +1,13 @@
+Write a short professional outreach email from Greg Gomez, CEO of Yirra Care.
+
+Campaign service:
+NDIS practical moving, decluttering, packing, cleaning before/after move and home transition support.
+
+Avoid saying only "removalist". Position it as practical participant support around moving.
+
+Rules:
+- Maximum 130 words.
+- Warm, professional, not pushy.
+- Useful for Support Coordinators, Recovery Coaches, housing providers.
+- Include simple opt-out.
+- Return JSON only: {"subject":"...", "body":"..."}
