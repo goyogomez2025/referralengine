@@ -422,12 +422,15 @@ def perform_update():
             )
             out.append(("git reset", r_reset.stdout + r_reset.stderr, r_reset.returncode == 0))
 
-        # ── Reinstall dependencies ────────────────────────────────────────
-        r_pip = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "-q"],
-            capture_output=True, text=True, cwd=str(ROOT)
-        )
-        out.append(("pip install", r_pip.stdout + r_pip.stderr, r_pip.returncode == 0))
+        # ── Reinstall dependencies (dev / source installs only) ──────────
+        if not getattr(sys, "frozen", False):
+            r_pip = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "-q"],
+                capture_output=True, text=True, cwd=str(ROOT)
+            )
+            out.append(("pip install", r_pip.stdout + r_pip.stderr, r_pip.returncode == 0))
+        else:
+            out.append(("pip install", "Skipped (not needed in packaged app)", True))
 
     except Exception as e:
         out.append(("error", str(e), False))
@@ -1523,6 +1526,15 @@ elif page == "  ⚙️   Settings":
             "Pulls the latest code from GitHub (`main` branch) and reinstalls dependencies. "
             "Your data, API keys and Gmail credentials are **never** overwritten."
         )
+
+        with st.expander("📋 What's new in v1.2.0", expanded=True):
+            st.markdown("""
+- ✅ **Fixed double-click crash** — app no longer shows "not open anymore" after closing browser
+- ✅ **Fixed Gmail sign-in** — OAuth now works inside the packaged `.app` (no more Port 8501 error)
+- ✅ **Fixed all workers** — Find / Scrape / Qualify / Write Emails / Create Drafts now run correctly inside the `.app`
+- ✅ **Yirra Care logo** applied as app icon
+- ✅ **Auto-shutdown** — app closes itself after 10 min idle
+            """)
 
         c1, c2 = st.columns(2)
 
