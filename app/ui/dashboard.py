@@ -1527,14 +1527,19 @@ elif page == "  ⚙️   Settings":
             "Your data, API keys and Gmail credentials are **never** overwritten."
         )
 
-        with st.expander("📋 What's new in v1.2.0", expanded=True):
+        with st.expander("📋 What's new in v1.3.0", expanded=True):
             st.markdown("""
-- ✅ **Fixed double-click crash** — app no longer shows "not open anymore" after closing browser
-- ✅ **Fixed Gmail sign-in** — OAuth now works inside the packaged `.app` (no more Port 8501 error)
-- ✅ **Fixed all workers** — Find / Scrape / Qualify / Write Emails / Create Drafts now run correctly inside the `.app`
-- ✅ **Yirra Care logo** applied as app icon
-- ✅ **Auto-shutdown** — app closes itself after 10 min idle
-            """)
+<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;
+            padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7">
+<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">Latest changes</div>
+<div>✅ <b>Fixed double-click crash</b> — app no longer shows "not open anymore" after closing browser</div>
+<div>✅ <b>Fixed Gmail sign-in</b> — OAuth now works inside the packaged .app (no more Port 8501 error)</div>
+<div>✅ <b>Fixed all workers</b> — Find / Scrape / Qualify / Write Emails / Create Drafts now run correctly</div>
+<div>✅ <b>Yirra Care logo</b> applied as app icon</div>
+<div>✅ <b>Auto-shutdown</b> — app closes itself after 10 min idle</div>
+<div>✅ <b>Update now refreshes automatically</b> — no manual restart needed</div>
+</div>
+""", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
 
