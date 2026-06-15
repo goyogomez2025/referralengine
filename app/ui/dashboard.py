@@ -360,13 +360,25 @@ def get_stats():
         return {k: 0 for k in ["prospects","contacts","qualified","emails","drafts","sent","contacted"]}
 
 
+def _installed_version() -> str:
+    """
+    Read the installed version from version.txt on disk.
+    This reflects git updates correctly even in the frozen .app,
+    where the compiled APP_VERSION constant stays at the build-time value.
+    """
+    try:
+        return (ROOT / "version.txt").read_text().strip()
+    except Exception:
+        return APP_VERSION  # fallback to compiled constant
+
+
 def check_update():
     try:
         import urllib.request
         from app.version import UPDATE_CHECK_URL
         with urllib.request.urlopen(UPDATE_CHECK_URL, timeout=2) as r:
             latest = r.read().decode().strip()
-        return latest if latest != APP_VERSION else None
+        return latest if latest != _installed_version() else None
     except Exception:
         return None
 
@@ -512,7 +524,7 @@ with st.sidebar:
         REFERRAL ENGINE
       </div>
       <div style="font-size:1.65rem;font-weight:800;color:#FFFFFF;letter-spacing:-.04em">
-        v{APP_VERSION}
+        v{_installed_version()}
       </div>
       <div style="font-size:.8rem;color:rgba(255,255,255,.75);margin-top:.25rem;font-weight:500">
         {settings.company_name}
@@ -1515,7 +1527,7 @@ elif page == "  ⚙️   Settings":
               <div style="font-size:.66rem;font-weight:700;color:#6B7280;
                           text-transform:uppercase;letter-spacing:.09em;margin-bottom:.3rem">
                 Installed Version</div>
-              <div style="font-size:1.4rem;font-weight:800;color:#111827">v{APP_VERSION}</div>
+              <div style="font-size:1.4rem;font-weight:800;color:#111827">v{_installed_version()}</div>
               <div style="font-size:.78rem;color:#9CA3AF;margin-top:.1rem">{os_name} · {ROOT}</div>
             </div>
           </div>
@@ -1527,17 +1539,17 @@ elif page == "  ⚙️   Settings":
             "Your data, API keys and Gmail credentials are **never** overwritten."
         )
 
-        with st.expander("📋 What's new in v1.3.0", expanded=True):
-            st.markdown("""
+        st.markdown("""
 <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;
-            padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7">
-<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">Latest changes</div>
+            padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7;margin-bottom:1rem">
+<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v1.4.0</div>
 <div>✅ <b>Fixed double-click crash</b> — app no longer shows "not open anymore" after closing browser</div>
 <div>✅ <b>Fixed Gmail sign-in</b> — OAuth now works inside the packaged .app (no more Port 8501 error)</div>
 <div>✅ <b>Fixed all workers</b> — Find / Scrape / Qualify / Write Emails / Create Drafts now run correctly</div>
 <div>✅ <b>Yirra Care logo</b> applied as app icon</div>
 <div>✅ <b>Auto-shutdown</b> — app closes itself after 10 min idle</div>
 <div>✅ <b>Update now refreshes automatically</b> — no manual restart needed</div>
+<div>✅ <b>Fixed crash after update</b> — app no longer breaks after running Update Now</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1549,7 +1561,7 @@ elif page == "  ⚙️   Settings":
             if nv3:
                 st.success(f"🆕 Update available: **v{nv3}** — click Update Now to install.")
             else:
-                st.info(f"✅ You are on the latest version (v{APP_VERSION})")
+                st.info(f"✅ You are on the latest version (v{_installed_version()})")
 
         if c2.button("⬇️ Update Now", key="do_upd", use_container_width=True):
             with st.spinner("Pulling latest code from GitHub…"):
