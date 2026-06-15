@@ -1,16 +1,34 @@
 """
 Yirra Care Agents — Desktop Launcher
-Single-instance: double-click always opens the browser (starts once, re-uses after).
-Auto-shutdown: exits after 10 minutes of no browser connections.
+======================================
+TWO-PROCESS ARCHITECTURE (fixes the macOS double-click bug):
+
+  LAUNCHER mode (default, double-click):
+    - Checks if Streamlit is already running (via ~/.yirracare.port)
+    - If YES  -> opens browser -> exits immediately  <- macOS sees app as "closed"
+    - If NO   -> writes port file, spawns DETACHED server subprocess -> waits for
+                server to be ready -> opens browser -> exits immediately
+
+  SERVER mode (env YIRRA_SERVER=1, spawned by launcher):
+    - Runs Streamlit inline (blocking)
+    - Idle watchdog: auto-shuts down after 10 min with no browser connections
+    - Cleans up port file on exit
+
+Because the launcher ALWAYS exits quickly, macOS never blocks a second
+double-click. The Streamlit server is just a background process.
 """
 import os, sys, socket, threading, time, webbrowser, traceback, subprocess
 from pathlib import Path
 
-# One file that stores the running server's port  (lives in user home, survives app moves)
 PORT_FILE = Path.home() / ".yirracare.port"
+LOG_FILE  = Path.home() / "Library" / "Logs" / "YirraCare.log"
+IDLE_SECS = 10 * 60
 
 
 def get_base_dir() -> Path:
+    env = os.environ.get("YIRRA_BASEDIR")
+    if env:
+        return Path(env)
     if not getattr(sys, "frozen", False):
         return Path(__file__).resolve().parent
     exe = Path(sys.executable).resolve()
@@ -22,7 +40,6 @@ def get_base_dir() -> Path:
 
 
 def _server_up(port: int) -> bool:
-    """Return True if a Streamlit server is responding on this port."""
     try:
         import urllib.request
         r = urllib.request.urlopen(
@@ -41,85 +58,43 @@ def find_free_port(start: int = 8501) -> int:
     return start
 
 
-def _open_browser(port: int) -> None:
-    url = f"http://localhost:{port}"
-    for _ in range(40):
-        time.sleep(1)
-        if _server_up(port):
-            webbrowser.open(url)
-            return
-    webbrowser.open(url)
+def _dialog(title: str, msg: str) -> None:
+    if sys.platform == "darwin":
+        safe = msg.replace("\\", "\\\\").replace('"', '\\"')
+        os.system(
+            "osascript -e 'display dialog \"" + safe + "\" "
+            "with title \"" + title + "\" buttons {\"OK\"} default button \"OK\"'"
+        )
 
 
-def _idle_watchdog(port: int, idle_minutes: int = 10) -> None:
-    """
-    Monitor active browser connections.
-    If nobody has been connected for idle_minutes, shut the server down.
-    """
-    idle_secs = 0
-    interval  = 30          # check every 30 s
-    threshold = idle_minutes * 60
-    lsof_env  = {**os.environ, "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
+# ---- SERVER MODE ------------------------------------------------------------
+
+def _idle_watchdog(port: int) -> None:
+    idle = 0
+    step = 30
+    env  = {**os.environ, "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
     while True:
-        time.sleep(interval)
+        time.sleep(step)
         try:
             r = subprocess.run(
                 ["lsof", "-i", f"tcp:{port}", "-n", "-P"],
-                capture_output=True, text=True, timeout=5, env=lsof_env
+                capture_output=True, text=True, timeout=5, env=env,
             )
-            # ESTABLISHED = active browser connection
-            active = r.stdout.count("ESTABLISHED")
-            idle_secs = 0 if active > 0 else idle_secs + interval
-            if idle_secs >= threshold:
+            idle = 0 if r.stdout.count("ESTABLISHED") > 0 else idle + step
+            if idle >= IDLE_SECS:
                 PORT_FILE.unlink(missing_ok=True)
-                os._exit(0)         # force-quit the entire Streamlit process
+                os._exit(0)
         except Exception:
-            idle_secs = 0           # if we can't check, assume active
+            idle = 0
 
 
-def _dialog(title: str, msg: str) -> None:
-    if sys.platform == "darwin":
-        safe = msg.replace('"', '\\"')
-        os.system(
-            f'osascript -e \'display dialog "{safe}" '
-            f'with title "{title}" buttons {{"OK"}} default button "OK"\''
-        )
-
-
-def main() -> None:
-    base_dir = get_base_dir()
-    os.chdir(str(base_dir))
-
-    # ── .env guard ───────────────────────────────────────────────────────────
-    if not (base_dir / ".env").exists():
-        _dialog(
-            "Setup Required",
-            f"No .env file found in:\\n{base_dir}\\n\\n"
-            "Copy .env.template to .env and add your OpenAI key."
-        )
-        if sys.platform == "darwin":
-            os.system(f'open "{base_dir}"')
+def run_server_mode(base_dir: Path) -> None:
+    try:
+        port = int(PORT_FILE.read_text().strip())
+    except Exception:
         return
 
-    # ── Single-instance check ────────────────────────────────────────────────
-    # If a server is already running (browser was just closed), re-open the browser
-    # instead of launching a second instance → fixes "not open anymore" error.
-    if PORT_FILE.exists():
-        try:
-            port = int(PORT_FILE.read_text().strip())
-            if _server_up(port):
-                webbrowser.open(f"http://localhost:{port}")
-                return          # ← already running, just open browser and exit
-        except Exception:
-            pass
-        PORT_FILE.unlink(missing_ok=True)   # stale file → start fresh
-
-    # ── Start a new server ───────────────────────────────────────────────────
-    port = find_free_port(8501)
-    PORT_FILE.write_text(str(port))
-
-    threading.Thread(target=_open_browser,    args=(port,), daemon=True).start()
-    threading.Thread(target=_idle_watchdog,   args=(port,), daemon=True).start()
+    threading.Thread(target=_idle_watchdog, args=(port,), daemon=True).start()
 
     sys.argv = [
         "streamlit", "run",
@@ -132,9 +107,74 @@ def main() -> None:
     ]
     from streamlit.web import cli as stcli
     try:
-        sys.exit(stcli.main())
+        stcli.main()
     finally:
-        PORT_FILE.unlink(missing_ok=True)   # clean up on normal exit
+        PORT_FILE.unlink(missing_ok=True)
+
+
+# ---- LAUNCHER MODE ----------------------------------------------------------
+
+def run_launcher_mode(base_dir: Path) -> None:
+    if not (base_dir / ".env").exists():
+        _dialog(
+            "Setup Required",
+            f"No .env file found in: {base_dir}. Copy .env.template to .env and add your OpenAI key.",
+        )
+        if sys.platform == "darwin":
+            os.system(f'open "{base_dir}"')
+        return
+
+    if PORT_FILE.exists():
+        try:
+            port = int(PORT_FILE.read_text().strip())
+            for _ in range(5):
+                if _server_up(port):
+                    webbrowser.open(f"http://localhost:{port}")
+                    return
+                time.sleep(1)
+        except Exception:
+            pass
+        PORT_FILE.unlink(missing_ok=True)
+
+    port = find_free_port(8501)
+    PORT_FILE.write_text(str(port))
+
+    exe = str(Path(sys.executable).resolve())
+    cmd = [exe] if getattr(sys, "frozen", False) else [exe, str(Path(__file__).resolve())]
+
+    env = {**os.environ, "YIRRA_SERVER": "1", "YIRRA_BASEDIR": str(base_dir)}
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    log_fd = open(str(LOG_FILE), "w")
+    subprocess.Popen(
+        cmd,
+        env=env,
+        start_new_session=True,
+        stdout=log_fd,
+        stderr=log_fd,
+        cwd=str(base_dir),
+    )
+    log_fd.close()
+
+    for _ in range(40):
+        time.sleep(1)
+        if _server_up(port):
+            webbrowser.open(f"http://localhost:{port}")
+            return
+
+    PORT_FILE.unlink(missing_ok=True)
+    _dialog("Yirra Care Agents", f"Server did not start in 40 seconds. Check log: {LOG_FILE}")
+
+
+# ---- ENTRY POINT ------------------------------------------------------------
+
+def main() -> None:
+    base_dir = get_base_dir()
+    os.chdir(str(base_dir))
+    if os.environ.get("YIRRA_SERVER") == "1":
+        run_server_mode(base_dir)
+    else:
+        run_launcher_mode(base_dir)
 
 
 if __name__ == "__main__":
@@ -149,9 +189,6 @@ if __name__ == "__main__":
             log.write_text(tb)
         except Exception:
             pass
-        _dialog(
-            "Yirra Care Agents — Error",
-            f"The app failed to start.\\nError log saved to:\\n{log}"
-        )
+        _dialog("Yirra Care Agents — Error", f"The app failed to start. Error log: {log}")
         if sys.platform == "darwin":
             os.system(f'open "{log}"')
