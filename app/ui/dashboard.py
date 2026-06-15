@@ -1310,17 +1310,19 @@ elif page == "  ⚙️   Settings":
               </div>
             </div>""", unsafe_allow_html=True)
             if st.button("🔗  Sign in with Gmail", use_container_width=False):
-                with st.spinner("Opening browser…"):
-                    res = subprocess.run(
-                        [sys.executable, str(ROOT / "setup_gmail_auth.py")],
-                        capture_output=True, text=True, cwd=str(ROOT)
-                    )
-                if (ROOT / "token.json").exists():
-                    st.success("✅ Gmail connected successfully!")
-                    st.rerun()
-                else:
-                    st.error("Sign-in failed — see details below.")
-                    st.code(res.stdout + res.stderr)
+                with st.spinner("Opening browser for Gmail sign-in… (complete the login in the browser window)"):
+                    try:
+                        from google_auth_oauthlib.flow import InstalledAppFlow
+                        _SCOPES = ["https://mail.google.com/"]
+                        _flow = InstalledAppFlow.from_client_secrets_file(
+                            str(ROOT / "client_secret.json"), _SCOPES
+                        )
+                        _creds = _flow.run_local_server(port=0, open_browser=True)
+                        (ROOT / "token.json").write_text(_creds.to_json())
+                        st.success("✅ Gmail connected successfully!")
+                        st.rerun()
+                    except Exception as _e:
+                        st.error(f"Sign-in failed: {_e}")
 
         else:
             # ── No client_secret — admin setup needed ──────────────────────

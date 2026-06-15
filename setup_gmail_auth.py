@@ -33,7 +33,7 @@ def main():
     from google.auth.transport.requests import Request  # noqa: F401
     from googleapiclient.discovery import build  # noqa: F401
 
-    SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
+    SCOPES = ["https://mail.google.com/"]
     token_path = Path("token.json")
 
     flow = InstalledAppFlow.from_client_secrets_file(str(secret_file), SCOPES)
