@@ -20,13 +20,16 @@ from pathlib import Path
 
 def get_base_dir() -> Path:
     """
-    Returns the directory that contains app/, .streamlit/, prompts/, .env etc.
+    Returns the directory containing app/, .streamlit/, prompts/, .env etc.
 
-    • Dev mode   → folder containing this script
-    • Frozen     → folder containing the executable
-                   (same as sys.executable's parent in --onedir / BUNDLE mode)
+    • Dev mode              → folder containing this script
+    • PyInstaller BUNDLE    → Contents/Resources/  (sys._MEIPASS)
+    • PyInstaller --onedir  → folder containing the .exe
     """
     if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)   # Contents/Resources/ in .app bundles
+        if meipass:
+            return Path(meipass).resolve()
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 

@@ -45,44 +45,44 @@ echo -e "${YELLOW}▸  Building macOS app bundle (this takes 5–10 min)...${NC}
 echo ""
 pyinstaller yirra_care_mac.spec --noconfirm --clean
 
-# ── 6. Copy user data into the app bundle ────────────────────────
-#    The launcher looks for files next to the exe:
-#    Yirra Care Agents.app/Contents/MacOS/
-APP_MACOS="dist/Yirra Care Agents.app/Contents/MacOS"
+# ── 6. Copy user data into Contents/Resources/ ───────────────────
+#    In PyInstaller BUNDLE mode, sys._MEIPASS = Contents/Resources/
+#    That is where ROOT resolves to, so all relative paths work there.
+APP_RES="dist/Yirra Care Agents.app/Contents/Resources"
 echo ""
-echo "▸  Copying data files into app bundle..."
+echo "▸  Copying data files into app bundle (Contents/Resources/)..."
 
-mkdir -p "$APP_MACOS/data"
-mkdir -p "$APP_MACOS/exports"
+mkdir -p "$APP_RES/data"
+mkdir -p "$APP_RES/exports"
 
-# .env (API keys — required)
 if [ -f ".env" ]; then
-    cp .env "$APP_MACOS/.env"
+    cp .env "$APP_RES/.env"
     echo -e "${GREEN}  ✓${NC}  .env"
 else
-    cp .env.template "$APP_MACOS/.env.template" 2>/dev/null || true
     echo -e "${YELLOW}  ⚠${NC}  No .env found — user must configure API keys after install"
 fi
 
-# Gmail OAuth credentials
 if [ -f "client_secret.json" ]; then
-    cp client_secret.json "$APP_MACOS/client_secret.json"
+    cp client_secret.json "$APP_RES/client_secret.json"
     echo -e "${GREEN}  ✓${NC}  client_secret.json"
 fi
 
-# Database (if exists — carries over contacts)
 if [ -f "data/yirra_referrals.sqlite" ]; then
-    cp data/yirra_referrals.sqlite "$APP_MACOS/data/"
+    cp data/yirra_referrals.sqlite "$APP_RES/data/"
     echo -e "${GREEN}  ✓${NC}  database"
 fi
 
-# Campaigns
 if [ -f "data/campaigns.json" ]; then
-    cp data/campaigns.json "$APP_MACOS/data/"
+    cp data/campaigns.json "$APP_RES/data/"
     echo -e "${GREEN}  ✓${NC}  campaigns.json"
 fi
 
-# ── 7. Final output ───────────────────────────────────────────────
+# ── 7. Remove macOS quarantine ────────────────────────────────────
+echo "▸  Removing macOS quarantine flag (allows double-click launch)..."
+xattr -rd com.apple.quarantine "dist/Yirra Care Agents.app" 2>/dev/null || true
+echo -e "${GREEN}  ✓${NC}  Quarantine removed"
+
+# ── 8. Final output ───────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════════════╗"
 echo -e "║  ${GREEN}✅  Build complete!${NC}                              ║"

@@ -1432,13 +1432,6 @@ elif page == "  ⚙️   Settings":
               <div style="font-size:1.4rem;font-weight:800;color:#111827">v{APP_VERSION}</div>
               <div style="font-size:.78rem;color:#9CA3AF;margin-top:.1rem">{os_name} · {ROOT}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:.66rem;font-weight:700;color:#6B7280;
-                          text-transform:uppercase;letter-spacing:.09em;margin-bottom:.3rem">
-                Source Repository</div>
-              <div style="font-size:.8rem;font-weight:600;color:#2563EB">{REPO_URL}</div>
-              <div style="font-size:.72rem;color:#9CA3AF;margin-top:.1rem">branch: main</div>
-            </div>
           </div>
         </div>""", unsafe_allow_html=True)
 
