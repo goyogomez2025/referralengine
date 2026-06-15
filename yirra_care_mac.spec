@@ -84,7 +84,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,         # No terminal window
-    argv_emulation=True,   # macOS: pass Apple Event args
+    argv_emulation=False,  # Don't process Apple Events (causes silent crash on double-click)
     target_arch=None,      # None = native arch (arm64 on M1/M2)
     codesign_identity=None,
     entitlements_file=None,
@@ -111,7 +111,8 @@ app = BUNDLE(
         "CFBundleVersion":          "1.1.0",
         "CFBundleShortVersionString": "1.1.0",
         "NSHighResolutionCapable":  True,
+        "LSUIElement":              True,   # background agent — won't be killed for having no window
         "LSApplicationCategoryType": "public.app-category.business",
-        "NSRequiresAquaSystemAppearance": False,   # allow dark/light mode
+        "NSRequiresAquaSystemAppearance": False,
     },
 )
