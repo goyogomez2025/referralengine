@@ -374,10 +374,16 @@ def _installed_version() -> str:
 
 def check_update():
     try:
-        import urllib.request
+        import urllib.request, json, base64
         from app.version import UPDATE_CHECK_URL
-        with urllib.request.urlopen(UPDATE_CHECK_URL, timeout=2) as r:
-            latest = r.read().decode().strip()
+        req = urllib.request.Request(
+            UPDATE_CHECK_URL,
+            headers={"Accept": "application/vnd.github+json",
+                     "User-Agent": "YirraCareAgents"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read())
+        latest = base64.b64decode(data["content"]).decode().strip()
         return latest if latest != _installed_version() else None
     except Exception:
         return None
