@@ -1,3 +1,6 @@
+[global]
+developmentMode = false
+
 [theme]
 base                     = "light"
 primaryColor             = "#1B7A47"

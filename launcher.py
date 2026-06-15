@@ -22,16 +22,27 @@ def get_base_dir() -> Path:
     """
     Returns the directory containing app/, .streamlit/, prompts/, .env etc.
 
-    • Dev mode              → folder containing this script
-    • PyInstaller BUNDLE    → Contents/Resources/  (sys._MEIPASS)
-    • PyInstaller --onedir  → folder containing the .exe
+    • Dev mode (running as .py script) → folder containing this file
+    • macOS .app bundle (PyInstaller BUNDLE+COLLECT):
+        sys.executable = Contents/MacOS/<exe>
+        All bundled files live at Contents/Resources/   ← use this
+        sys._MEIPASS is NOT set in --onedir/BUNDLE mode
+    • Windows --onedir:
+        All files are in the same folder as the .exe
     """
-    if getattr(sys, "frozen", False):
-        meipass = getattr(sys, "_MEIPASS", None)   # Contents/Resources/ in .app bundles
-        if meipass:
-            return Path(meipass).resolve()
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).resolve().parent
+
+    exe = Path(sys.executable).resolve()
+
+    if sys.platform == "darwin":
+        # Navigate: Contents/MacOS/<exe>  →  Contents/  →  Contents/Resources/
+        resources = exe.parent.parent / "Resources"
+        if resources.exists() and (resources / "app").exists():
+            return resources
+
+    # Windows / fallback: files sit next to the executable
+    return exe.parent
 
 
 # ─── Browser helper ─────────────────────────────────────────────────────────
@@ -85,8 +96,9 @@ def main() -> None:
         str(base_dir / "app" / "ui" / "dashboard.py"),
         f"--server.port={port}",
         "--server.headless=true",
+        "--global.developmentMode=false",   # required when running inside PyInstaller
         "--browser.gatherUsageStats=false",
-        "--server.fileWatcherType=none",   # disable hot-reload in frozen mode
+        "--server.fileWatcherType=none",
     ]
 
     from streamlit.web import cli as stcli

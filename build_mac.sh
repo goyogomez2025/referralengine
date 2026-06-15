@@ -81,7 +81,6 @@ fi
 echo "▸  Removing macOS quarantine flag (allows double-click launch)..."
 xattr -rd com.apple.quarantine "dist/Yirra Care Agents.app" 2>/dev/null || true
 echo -e "${GREEN}  ✓${NC}  Quarantine removed"
-
 # ── 8. Final output ───────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════════════╗"
