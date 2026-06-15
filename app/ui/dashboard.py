@@ -229,12 +229,93 @@ def db_query(sql, params=()):
     return df
 
 
-def run_step(args):
-    r = subprocess.run(
-        [sys.executable, "-m", "app.main"] + args,
-        capture_output=True, text=True, cwd=str(ROOT)
-    )
-    return (r.stdout + r.stderr).strip(), r.returncode == 0
+def run_step(args: list) -> tuple:
+    """
+    Run a worker in-process (works in both dev and frozen .app).
+    Avoids spawning sys.executable as a subprocess, which breaks in PyInstaller bundles.
+    """
+    import io, traceback
+    from contextlib import redirect_stdout, redirect_stderr
+
+    cmd  = args[0]
+    rest = args[1:]
+
+    # helpers to parse --key=value flags from the args list
+    def _int(flag: str, default: int = 100) -> int:
+        for a in rest:
+            if a.startswith(f"{flag}="):
+                try:
+                    return int(a.split("=", 1)[1])
+                except ValueError:
+                    pass
+        return default
+
+    def _str(flag: str, default=None):
+        for a in rest:
+            if a.startswith(f"{flag}="):
+                return a.split("=", 1)[1]
+        return default
+
+    buf = io.StringIO()
+    try:
+        from app.db import init_db
+        init_db()
+
+        with redirect_stdout(buf), redirect_stderr(buf):
+            if cmd == "find":
+                from app.workers import find_contacts
+                n = find_contacts.run(
+                    query=None,
+                    limit=_int("--limit"),
+                    campaign_id=_str("--campaign"),
+                )
+                buf.write(f"Prospects found/saved: {n}\n")
+
+            elif cmd == "scrape":
+                from app.workers import scrape_emails
+                n = scrape_emails.run(limit=_int("--limit"), location=None)
+                buf.write(f"Contacts extracted: {n}\n")
+
+            elif cmd == "qualify":
+                from app.workers import qualify_contacts
+                n = qualify_contacts.run(limit=_int("--limit"))
+                buf.write(f"Contacts qualified: {n}\n")
+
+            elif cmd == "write-emails":
+                from app.workers import write_emails
+                n = write_emails.run(
+                    campaign=_str("--campaign") or "",
+                    limit=_int("--limit"),
+                )
+                buf.write(f"Emails written: {n}\n")
+
+            elif cmd == "create-drafts":
+                from app.workers import create_gmail_drafts
+                n = create_gmail_drafts.run(limit=_int("--limit"))
+                buf.write(f"Gmail drafts created: {n}\n")
+
+            elif cmd == "export-contacts":
+                from app.workers import export_data
+                path = export_data.export_contacts(_str("--path") or "")
+                buf.write(f"Contacts exported: {path}\n")
+
+            elif cmd == "export-emails":
+                from app.workers import export_data
+                path = export_data.export_emails(_str("--path") or "")
+                buf.write(f"Emails exported: {path}\n")
+
+            elif cmd == "import-contacts":
+                from app.workers import import_contacts
+                n = import_contacts.run(_str("--path") or "")
+                buf.write(f"Contacts imported: {n}\n")
+
+            else:
+                return f"Unknown command: {cmd}", False
+
+        return buf.getvalue().strip(), True
+
+    except Exception:
+        return (buf.getvalue() + "\n" + traceback.format_exc()).strip(), False
 
 
 def show_result(out: str, ok: bool):
