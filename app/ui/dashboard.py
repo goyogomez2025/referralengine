@@ -363,13 +363,22 @@ def get_stats():
 def _installed_version() -> str:
     """
     Read the installed version from version.txt on disk.
-    This reflects git updates correctly even in the frozen .app,
-    where the compiled APP_VERSION constant stays at the build-time value.
+    Tries multiple paths so it works in both dev and frozen .app,
+    and correctly reflects git updates (not the compiled constant).
     """
-    try:
-        return (ROOT / "version.txt").read_text().strip()
-    except Exception:
-        return APP_VERSION  # fallback to compiled constant
+    candidates = [
+        ROOT / "version.txt",                                          # dev + frozen (via ROOT)
+        Path(sys.executable).resolve().parent.parent / "Resources" / "version.txt",  # frozen .app MacOS/../../Resources
+        Path(sys.executable).resolve().parent / "version.txt",        # frozen onedir
+    ]
+    for p in candidates:
+        try:
+            content = p.read_text().strip()
+            if content:
+                return content
+        except Exception:
+            pass
+    return APP_VERSION  # last resort: compiled constant
 
 
 def check_update():

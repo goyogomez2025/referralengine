@@ -22,9 +22,11 @@ a = Analysis(
     pathex=["."],
     binaries=st_binaries + alt_binaries + pd_binaries,
     datas=[
-        ("app",        "app"),
-        (".streamlit", ".streamlit"),
-        ("prompts",    "prompts"),
+        ("app",          "app"),
+        (".streamlit",   ".streamlit"),
+        ("prompts",      "prompts"),
+        ("version.txt",  "."),       # ← needed by _installed_version() in dashboard
+        (".env.template",".",),
     ] + st_datas + alt_datas + pd_datas,
     hiddenimports=[
         # Streamlit internals
