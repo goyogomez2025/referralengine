@@ -449,18 +449,26 @@ def perform_update():
             )
             out.append(("git reset", r_reset.stdout + r_reset.stderr, r_reset.returncode == 0))
 
-            # CRITICAL: git reset --hard in a fresh repo only updates the index.
-            # It does NOT overwrite pre-existing untracked files on disk.
-            # checkout-index -a -f forces every indexed file to be written to
-            # the working tree, overwriting existing copies (version.txt etc).
-            # .env / data/ / token.json are in .gitignore → not indexed → safe.
             if r_reset.returncode == 0:
+                # Force-write every indexed file to the working tree.
                 r_ci = subprocess.run(
                     ["git", "checkout-index", "-a", "-f"],
                     capture_output=True, text=True, cwd=str(ROOT)
                 )
-                msg = r_ci.stdout + r_ci.stderr if (r_ci.stdout + r_ci.stderr).strip() else "All files written to disk"
+                msg = r_ci.stdout + r_ci.stderr if (r_ci.stdout + r_ci.stderr).strip() else "All files updated"
                 out.append(("git checkout-index", msg, r_ci.returncode == 0))
+
+                # Explicitly overwrite version.txt using git's object store.
+                # This guarantees the correct version is on disk regardless of
+                # any OS-level file-write buffering from the subprocess above.
+                r_ver = subprocess.run(
+                    ["git", "show", "HEAD:version.txt"],
+                    capture_output=True, text=True, cwd=str(ROOT)
+                )
+                if r_ver.returncode == 0 and r_ver.stdout.strip():
+                    new_version_str = r_ver.stdout.strip()
+                    (ROOT / "version.txt").write_text(new_version_str + "\n")
+                    out.append(("version.txt", f"→ {new_version_str}", True))
 
         # ── Reinstall dependencies (dev / source installs only) ──────────
         if not getattr(sys, "frozen", False):
