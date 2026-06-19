@@ -751,7 +751,7 @@ if page == "  🏠   Dashboard":
         </div>""", unsafe_allow_html=True)
 
     with col_p:
-        # ── PROVIDER TYPE CARD ────────────────────────────────────────────
+        # ── CONTACT TYPE CARD ─────────────────────────────────────────────
         df_t = db_query(
             "SELECT contact_type type, COUNT(*) count FROM contacts "
             "WHERE contact_type IS NOT NULL GROUP BY contact_type ORDER BY count DESC"
@@ -787,7 +787,7 @@ if page == "  🏠   Dashboard":
             <div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;
                         padding:1rem 1.1rem">
               <p style="font-size:.66rem;font-weight:700;color:#6B7280;text-transform:uppercase;
-                        letter-spacing:.09em;margin:0 0 .75rem;padding:0">By Provider Type</p>
+                        letter-spacing:.09em;margin:0 0 .75rem;padding:0">By Contact Type</p>
               {bars_inner}
             </div>""", unsafe_allow_html=True)
 
@@ -879,7 +879,7 @@ elif page == "  ⚡   Pipeline":
     # ── 1 · Find ──
     with t_find:
         st.markdown("#### 1 · Find Prospects")
-        st.caption("Search the web for NDIS providers matching your campaign queries.")
+        st.caption("Search the web for prospects matching your campaign search queries.")
         fc1, fc2 = st.columns(2)
         l1     = fc1.slider("Max results", 10, 100, 25, key="l1")
         c_find = fc2.selectbox("Campaign", list(camp_map.keys()),
@@ -902,7 +902,7 @@ elif page == "  ⚡   Pipeline":
     # ── 3 · Qualify ──
     with t_qualify:
         st.markdown("#### 3 · Qualify Contacts")
-        st.caption("Score each contact 0–100 based on NDIS relevance, email quality, and location.")
+        st.caption("Score each contact 0–100 based on role relevance, email quality, and location.")
         l3 = st.slider("Max contacts to score", 10, 200, 50, key="l3")
         if st.button("✅  Run Qualify", key="b3"):
             with st.spinner("Scoring contacts…"):
@@ -971,9 +971,34 @@ elif page == "  🎯   Campaigns":
     st.markdown("# Campaigns")
     st.markdown(
         '<p style="color:#374151;font-size:.9rem;margin-top:-.4rem;margin-bottom:1.4rem">'
-        'Define NDIS niches, service areas and search queries for each outreach campaign.</p>',
+        'Define your industry, target niche, service offer and search queries for each outreach campaign.</p>',
         unsafe_allow_html=True
     )
+
+    # ── Industry / Tone options (used in both cards and form) ──
+    INDUSTRY_OPTS = [
+        "NDIS / Disability Services",
+        "Healthcare / Allied Health",
+        "Aged Care",
+        "Real Estate",
+        "Legal Services",
+        "Construction / Trades",
+        "Hospitality / Events",
+        "Education / Training",
+        "Finance / Accounting",
+        "Technology / Software",
+        "Retail / E-commerce",
+        "Marketing / Media",
+        "Professional Services",
+        "Other",
+    ]
+    TONE_OPTS = [
+        "Warm & Professional",
+        "Direct & Concise",
+        "Friendly & Conversational",
+        "Formal & Corporate",
+        "Consultative",
+    ]
 
     campaigns = campaign_service.all_campaigns()
     if campaigns:
@@ -986,27 +1011,56 @@ elif page == "  🎯   Campaigns":
                 '<span style="background:#F3F4F6;color:#6B7280;border-radius:20px;'
                 'padding:.15rem .55rem;font-size:.72rem;font-weight:700">Inactive</span>'
             )
+            industry_badge = (
+                f'<span style="background:#DBEAFE;color:#1E3A8A;border-radius:20px;'
+                f'padding:.18rem .6rem;font-size:.78rem;font-weight:600">'
+                f'{c.get("industry","")}</span>'
+            ) if c.get("industry") else ""
+            niche_badge = (
+                f'<span style="background:#EDE9FE;color:#4C1D95;border-radius:20px;'
+                f'padding:.18rem .6rem;font-size:.78rem;font-weight:600">'
+                f'{c.get("niche","")}</span>'
+            ) if c.get("niche") else ""
+            tone_badge = (
+                f'<span style="background:#FEF3C7;color:#78350F;border-radius:20px;'
+                f'padding:.18rem .6rem;font-size:.78rem;font-weight:500">'
+                f'✍️ {c.get("tone","")}</span>'
+            ) if c.get("tone") else ""
+            # Sender line
+            sender_parts = [p for p in [
+                c.get("sender_name"), c.get("sender_title"), c.get("sender_company")
+            ] if p]
+            sender_line = (
+                f'<div style="font-size:.83rem;color:#6B7280;margin-bottom:.3rem">'
+                f'👤 {" · ".join(sender_parts)}</div>'
+            ) if sender_parts else ""
+            # Value proposition
+            vp = c.get("value_proposition", "")
+            vp_line = (
+                f'<div style="font-size:.86rem;color:#374151;margin-bottom:.25rem;'
+                f'font-style:italic">"{vp}"</div>'
+            ) if vp else ""
             locations_str = ", ".join(c.get("locations", [])) or "—"
             queries_list  = c.get("queries", [])
 
-            # Card container
             st.markdown(f"""
             <div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:16px;
                         padding:1.3rem 1.5rem 1.1rem;margin-bottom:1rem;
                         box-shadow:0 1px 4px rgba(0,0,0,.06)">
-              <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem">
                 <span style="font-size:1.05rem;font-weight:800;color:#111827">
                   {c.get("name", c["id"])}
                 </span>
-                <span style="background:#EDE9FE;color:#4C1D95;border-radius:20px;
-                             padding:.18rem .6rem;font-size:.78rem;font-weight:600">
-                  {c.get("niche","—")}
-                </span>
+                {industry_badge}
+                {niche_badge}
+                {tone_badge}
                 {status_badge}
               </div>
-              <div style="font-size:.88rem;color:#374151;margin-bottom:.25rem">
+              {sender_line}
+              <div style="font-size:.88rem;color:#374151;margin-bottom:.2rem">
                 <b>Service:</b> {c.get("service","—")}
               </div>
+              {vp_line}
               <div style="font-size:.88rem;color:#374151;margin-bottom:.6rem">
                 <b>Locations:</b> {locations_str}
               </div>
@@ -1023,7 +1077,6 @@ elif page == "  🎯   Campaigns":
               </div>
             </div>""", unsafe_allow_html=True)
 
-            # Edit / Delete buttons below the card
             bc1, bc2, bc3 = st.columns([2, 2, 8])
             if bc1.button("✏️ Edit",   key=f"e_{c['id']}"):
                 st.session_state["editing"] = c["id"]
@@ -1038,7 +1091,7 @@ elif page == "  🎯   Campaigns":
             '<div style="font-weight:600;font-size:.95rem;color:#111827;margin-bottom:.2rem">'
             'No campaigns yet</div>'
             '<div style="font-size:.85rem;color:#6B7280">'
-            'Create your first campaign below to start finding NDIS providers.</div>'
+            'Create your first campaign below to get started.</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -1054,54 +1107,108 @@ elif page == "  🎯   Campaigns":
         unsafe_allow_html=True
     )
     with st.form("cf"):
-        c1, c2 = st.columns(2)
-        name   = c1.text_input("Campaign Name *", value=ex.get("name", ""),
-                               placeholder="e.g. Brisbane Support Coordinators")
-        niche_opts = [
-            "Support Coordinator", "Recovery Coach", "Occupational Therapist",
-            "Plan Manager", "Community Organisation", "Other",
-        ]
-        idx   = niche_opts.index(ex.get("niche","Support Coordinator")) \
-                if ex.get("niche") in niche_opts else 0
-        niche = c2.selectbox("Target Niche *", niche_opts, index=idx)
+        # ── Section 1: Campaign Identity ──
+        st.markdown('<span class="sec-head">🎯 Campaign Identity</span>', unsafe_allow_html=True)
+        r1c1, r1c2 = st.columns(2)
+        name = r1c1.text_input(
+            "Campaign Name *",
+            value=ex.get("name", ""),
+            placeholder="e.g. Brisbane Support Coordinators",
+        )
+        industry_idx = INDUSTRY_OPTS.index(ex.get("industry", "NDIS / Disability Services")) \
+                       if ex.get("industry") in INDUSTRY_OPTS else 0
+        industry = r1c2.selectbox("Industry *", INDUSTRY_OPTS, index=industry_idx)
+
+        r2c1, r2c2 = st.columns(2)
+        niche = r2c1.text_input(
+            "Target Role / Niche *",
+            value=ex.get("niche", ""),
+            placeholder="e.g. Support Coordinator, Solicitor, Real Estate Agent, GP…",
+            help="The type of person or business you are reaching out to.",
+        )
+        tone_idx = TONE_OPTS.index(ex.get("tone", "Warm & Professional")) \
+                   if ex.get("tone") in TONE_OPTS else 0
+        tone = r2c2.selectbox("Email Tone", TONE_OPTS, index=tone_idx)
+
+        # ── Section 2: Your Business ──
+        st.markdown('<span class="sec-head">👤 Your Business</span>', unsafe_allow_html=True)
+        s1c1, s1c2, s1c3 = st.columns(3)
+        sender_name = s1c1.text_input(
+            "Your Name",
+            value=ex.get("sender_name", settings.sender_name),
+            placeholder="e.g. Greg Gomez",
+        )
+        sender_title = s1c2.text_input(
+            "Your Title",
+            value=ex.get("sender_title", settings.sender_title),
+            placeholder="e.g. CEO | Founder",
+        )
+        sender_company = s1c3.text_input(
+            "Company Name",
+            value=ex.get("sender_company", settings.company_name),
+            placeholder="e.g. Yirra Care",
+        )
+
+        # ── Section 3: Campaign Details ──
+        st.markdown('<span class="sec-head">📋 Campaign Details</span>', unsafe_allow_html=True)
         service = st.text_input(
-            "Service Description",
-            value=ex.get("service", "NDIS cleaning and domestic task support"),
-            placeholder="e.g. NDIS cleaning and domestic assistance"
+            "Service / Offer Description *",
+            value=ex.get("service", ""),
+            placeholder="e.g. NDIS cleaning and domestic task support, Conveyancing services, Property management…",
         )
-        locs = st.text_area(
+        value_prop = st.text_area(
+            "Value Proposition",
+            value=ex.get("value_proposition", ""),
+            height=72,
+            placeholder="What can you offer their clients? e.g. We have capacity for participants needing cleaning support and can onboard quickly.",
+            help="Used by the AI when writing outreach emails — describe why you are valuable to their clients.",
+        )
+
+        # ── Section 4: Locations & Search ──
+        st.markdown('<span class="sec-head">📍 Locations & Search Queries</span>', unsafe_allow_html=True)
+        lc1, lc2 = st.columns([1, 2])
+        locs = lc1.text_area(
             "Locations (one per line)",
-            value="\n".join(ex.get("locations", [
-                "Brisbane North","Moreton Bay","Redcliffe","Caboolture"
-            ])),
-            height=90,
+            value="\n".join(ex.get("locations", [])),
+            height=120,
+            placeholder="e.g.\nBrisbane North\nMoreton Bay\nRedcliffe",
         )
-        queries = st.text_area(
+        queries = lc2.text_area(
             "Search Queries (one per line) *",
-            value="\n".join(ex.get("queries", [
-                "NDIS support coordinator Brisbane email",
-                "NDIS support coordination Moreton Bay contact",
-                "support coordinator Redcliffe NDIS email",
-            ])),
-            height=130,
-            help="Each line = one Google/DuckDuckGo search. Be specific with location + role.",
+            value="\n".join(ex.get("queries", [])),
+            height=120,
+            help="Each line = one Google/DuckDuckGo search. Be specific: include role + location + 'email' or 'contact'.",
+            placeholder="e.g.\nsupport coordinator Brisbane email\nrecovery coach Moreton Bay contact\nsolicitor Sydney conveyancing email",
         )
+
         active = st.toggle("Active", value=ex.get("active", True))
-        s1, s2   = st.columns(2)
-        saved    = s1.form_submit_button("💾  Save Campaign", use_container_width=True)
-        canceled = s2.form_submit_button("Cancel",            use_container_width=True)
+        sb1, sb2 = st.columns(2)
+        saved    = sb1.form_submit_button("💾  Save Campaign", use_container_width=True)
+        canceled = sb2.form_submit_button("Cancel",            use_container_width=True)
+
         if saved:
             name_v    = (name    or "").strip()
+            niche_v   = (niche   or "").strip()
+            service_v = (service or "").strip()
             queries_v = (queries or "").strip()
             if not name_v or not queries_v:
-                st.error("Campaign Name and at least one query are required.")
+                st.error("Campaign Name and at least one Search Query are required.")
             else:
                 cid = eid or re.sub(r"[^a-z0-9]+", "_", name_v.lower()).strip("_")
                 campaign_service.upsert({
-                    "id": cid, "name": name_v, "niche": niche, "service": service,
-                    "locations": [l.strip() for l in (locs or "").splitlines() if l.strip()],
-                    "queries":   [q.strip() for q in queries_v.splitlines()    if q.strip()],
-                    "active": active,
+                    "id":               cid,
+                    "name":             name_v,
+                    "industry":         industry,
+                    "niche":            niche_v,
+                    "tone":             tone,
+                    "sender_name":      (sender_name    or "").strip() or settings.sender_name,
+                    "sender_title":     (sender_title   or "").strip() or settings.sender_title,
+                    "sender_company":   (sender_company or "").strip() or settings.company_name,
+                    "service":          service_v,
+                    "value_proposition": (value_prop or "").strip(),
+                    "locations":        [l.strip() for l in (locs or "").splitlines() if l.strip()],
+                    "queries":          [q.strip() for q in queries_v.splitlines()    if q.strip()],
+                    "active":           active,
                 })
                 st.session_state.pop("editing", None)
                 st.success("Campaign saved!")
@@ -1118,7 +1225,7 @@ elif page == "  👥   Contacts":
     st.markdown("# Contacts")
     st.markdown(
         '<p style="color:#374151;font-size:.9rem;margin-top:-.4rem;margin-bottom:1.1rem">'
-        'NDIS providers found and scored by the pipeline</p>',
+        'Contacts found and scored by the pipeline</p>',
         unsafe_allow_html=True
     )
 
@@ -1156,7 +1263,7 @@ elif page == "  👥   Contacts":
         ["all","new","enriched","qualified","low_priority","email_ready","contacted","rejected"]
     )
     ctype  = f3.selectbox(
-        "Provider Type",
+        "Contact Type",
         ["all","Support Coordinator","Recovery Coach","Occupational Therapist",
          "Plan Manager","Community Organisation","Other"]
     )
@@ -1201,7 +1308,7 @@ elif page == "  👥   Contacts":
                 "organisation": st.column_config.TextColumn("Organisation",     width="large"),
                 "email":        st.column_config.TextColumn("Email",            width="medium"),
                 "location":     st.column_config.TextColumn("Location",         width="medium"),
-                "contact_type": st.column_config.TextColumn("Provider Type",    width="medium"),
+                "contact_type": st.column_config.TextColumn("Contact Type",    width="medium"),
                 "score":        st.column_config.NumberColumn("Score", format="%d ⭐", width="small"),
                 "status":       st.column_config.TextColumn("Status",           width="small"),
                 "created_at":   st.column_config.TextColumn("Added",            width="medium"),
@@ -1641,14 +1748,12 @@ elif page == "  ⚙️   Settings":
         st.markdown("""
 <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;
             padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7;margin-bottom:1rem">
-<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v2.3.0</div>
-<div>✅ <b>Update system fully working</b> — app restarts automatically after Update Now, loading all new code</div>
-<div>✅ <b>Delete Contacts</b> — select contacts and delete them (+ their emails) from the Contacts page</div>
-<div>✅ <b>Delete Email Drafts</b> — remove draft emails from Gmail and the database in one click</div>
-<div>✅ <b>Double-click always works</b> — closing the browser and reopening works every time</div>
-<div>✅ <b>Gmail sign-in works</b> — OAuth works inside the packaged .app</div>
-<div>✅ <b>All pipeline steps work</b> — Find / Scrape / Qualify / Write Emails / Create Drafts all working</div>
-<div>✅ <b>Yirra Care logo</b> — app icon uses the Yirra Care branding</div>
+<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v2.4.0</div>
+<div>✅ <b>Multi-industry campaigns</b> — Industry selector (14 industries), free-text niche, tone, sender info, value proposition</div>
+<div>✅ <b>AI emails use campaign context</b> — sender name, company, tone and value proposition all flow into GPT prompts</div>
+<div>✅ <b>Generic contact qualifying</b> — non-NDIS contacts now qualify correctly for any industry</div>
+<div>✅ <b>Update system restarts server</b> — all new code loads after Update Now without manual reopen</div>
+<div>✅ <b>Delete Contacts &amp; Email Drafts</b> — remove from DB and Gmail in one click</div>
 </div>
 """, unsafe_allow_html=True)
 

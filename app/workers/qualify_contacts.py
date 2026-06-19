@@ -14,7 +14,7 @@ SERVICE_ANGLES = {
     "Occupational Therapist": "NDIS cleaning, decluttering, domestic tasks and home support where participants need practical assistance",
     "Plan Manager": "provider introduction, compliant invoicing, fast service agreements and reliable communication",
     "Community Organisation": "NDIS cleaning, domestic tasks, community access and practical home support",
-    "Other": "NDIS cleaning and domestic task support",
+    "Other": "professional services and support",
 }
 
 BAD_PATTERNS = ["web design", "seo agency", "marketing agency", "jobs", "career", "recruitment"]
@@ -67,8 +67,10 @@ def qualify(contact: dict) -> tuple[int, str, str, str, str]:
     elif contact_type == "Plan Manager":
         score += 25
     else:
-        score += 10
-        reasons.append("No strong role signal; keep low priority.")
+        # Generic contact — give a reasonable baseline score so non-NDIS
+        # industries (Real Estate, Legal, Healthcare, etc.) still qualify.
+        score += 40
+        reasons.append("No specific niche keyword matched; general outreach contact.")
 
     email = (contact.get("email") or "").lower()
     local = email.split("@")[0]
