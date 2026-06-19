@@ -229,6 +229,18 @@ def db_query(sql, params=()):
     return df
 
 
+def _live_env(key: str, fallback: str = "") -> str:
+    """Read a value fresh from the .env file on every render so that
+    changes made in the Settings page are reflected immediately in the
+    sidebar / header without needing a server restart."""
+    try:
+        from dotenv import dotenv_values
+        val = dotenv_values(str(ROOT / ".env")).get(key, "")
+        return val if val else fallback
+    except Exception:
+        return fallback
+
+
 def run_step(args: list) -> tuple:
     """
     Run a worker in-process (works in both dev and frozen .app).
@@ -563,7 +575,7 @@ with st.sidebar:
         v{_installed_version()}
       </div>
       <div style="font-size:.8rem;color:rgba(255,255,255,.75);margin-top:.25rem;font-weight:500">
-        {settings.company_name}
+        {_live_env("COMPANY_NAME", settings.company_name)}
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -635,7 +647,7 @@ if page == "  🏠   Dashboard":
       <div>
         <h1 style="margin:0 0 .1rem;font-size:1.5rem;font-weight:800">Pipeline Dashboard</h1>
         <p style="color:#9CA3AF;font-size:.79rem;margin:0;font-weight:500">
-          {settings.company_name} · NDIS Outreach Automation
+          {_live_env("COMPANY_NAME", settings.company_name)} · Outreach Automation
         </p>
       </div>
       <div>{ready_badge}</div>
@@ -1014,8 +1026,8 @@ elif page == "  🎯   Campaigns":
             industry_badge = (
                 f'<span style="background:#DBEAFE;color:#1E3A8A;border-radius:20px;'
                 f'padding:.18rem .6rem;font-size:.78rem;font-weight:600">'
-                f'{c.get("industry","")}</span>'
-            ) if c.get("industry") else ""
+                f'{c.get("industry") or "NDIS / Disability Services"}</span>'
+            )
             niche_badge = (
                 f'<span style="background:#EDE9FE;color:#4C1D95;border-radius:20px;'
                 f'padding:.18rem .6rem;font-size:.78rem;font-weight:600">'
