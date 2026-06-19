@@ -1191,23 +1191,56 @@ elif page == "  👥   Contacts":
             unsafe_allow_html=True
         )
     else:
-        st.dataframe(
-            df,
+        sel_df = df.copy()
+        sel_df.insert(0, "select", False)
+        edited_contacts = st.data_editor(
+            sel_df,
             column_config={
-                "id":           st.column_config.NumberColumn("ID",           width="small"),
-                "organisation": st.column_config.TextColumn("Organisation",   width="large"),
-                "email":        st.column_config.TextColumn("Email",          width="medium"),
-                "location":     st.column_config.TextColumn("Location",       width="medium"),
-                "contact_type": st.column_config.TextColumn("Provider Type",  width="medium"),
+                "select":       st.column_config.CheckboxColumn("✓",            default=False, width="small"),
+                "id":           st.column_config.NumberColumn("ID",             width="small"),
+                "organisation": st.column_config.TextColumn("Organisation",     width="large"),
+                "email":        st.column_config.TextColumn("Email",            width="medium"),
+                "location":     st.column_config.TextColumn("Location",         width="medium"),
+                "contact_type": st.column_config.TextColumn("Provider Type",    width="medium"),
                 "score":        st.column_config.NumberColumn("Score", format="%d ⭐", width="small"),
-                "status":       st.column_config.TextColumn("Status",         width="small"),
-                "created_at":   st.column_config.TextColumn("Added",          width="medium"),
+                "status":       st.column_config.TextColumn("Status",           width="small"),
+                "created_at":   st.column_config.TextColumn("Added",            width="medium"),
             },
-            use_container_width=True, hide_index=True, height=510,
+            use_container_width=True, hide_index=True, height=480,
+            key="contacts_editor",
         )
-        st.download_button(
-            "⬇️ Download CSV", df.to_csv(index=False), "contacts.csv", "text/csv"
+        selected_contact_ids = df[edited_contacts["select"]]["id"].tolist()
+        n_contacts_sel = len(selected_contact_ids)
+
+        cd1, cd2, cd3 = st.columns([2, 2, 3])
+        cd1.download_button(
+            "⬇️ Download CSV", df.to_csv(index=False), "contacts.csv", "text/csv",
+            use_container_width=True,
         )
+        del_btn = cd2.button(
+            f"🗑 Delete {n_contacts_sel} Contact{'s' if n_contacts_sel != 1 else ''}",
+            disabled=n_contacts_sel == 0, use_container_width=True,
+            key="del_contacts_btn",
+        )
+        if del_btn:
+            st.session_state["confirm_del_contacts"] = selected_contact_ids
+
+        if "confirm_del_contacts" in st.session_state:
+            ids_to_del = st.session_state["confirm_del_contacts"]
+            st.warning(
+                f"⚠️ Delete **{len(ids_to_del)}** contact(s) and all their associated emails? "
+                f"This cannot be undone."
+            )
+            y1, y2 = st.columns(2)
+            if y1.button("✅ Yes, delete permanently", key="confirm_del_c_yes"):
+                from app.db import delete_contacts
+                n_del = delete_contacts(ids_to_del)
+                st.session_state.pop("confirm_del_contacts", None)
+                st.success(f"🗑 Deleted {n_del} contact(s).")
+                st.rerun()
+            if y2.button("Cancel", key="confirm_del_c_no"):
+                st.session_state.pop("confirm_del_contacts", None)
+                st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1282,8 +1315,8 @@ elif page == "  ✉️   Emails":
                 )
 
             # ── Action buttons ──
-            act1, act2, act3 = st.columns([2, 2, 3])
-            act3.markdown(
+            act1, act2, act3, act4 = st.columns([2, 2, 2, 2])
+            act4.markdown(
                 f'<p style="text-align:right;padding:.6rem 0;color:#374151;font-size:.86rem">'
                 f'<b>{n_sel}</b> of {len(df_raw)} selected</p>',
                 unsafe_allow_html=True
@@ -1295,9 +1328,39 @@ elif page == "  ✉️   Emails":
                 show_result(out, ok)
                 st.rerun()
 
-            send_label = f"📤 Send {n_sel} Email{'s' if n_sel != 1 else ''}"
+            send_label = f"📤 Send {n_sel}" if n_sel else "📤 Send"
             if act2.button(send_label, disabled=n_sel == 0):
                 st.session_state["confirm_ids"] = selected_ids
+
+            del_email_label = f"🗑 Delete {n_sel}" if n_sel else "🗑 Delete"
+            if act3.button(del_email_label, disabled=n_sel == 0, key="del_emails_btn"):
+                st.session_state["confirm_del_emails"] = selected_ids
+
+            # ── Delete drafts confirmation ──
+            if "confirm_del_emails" in st.session_state:
+                ids_to_del_e = st.session_state["confirm_del_emails"]
+                st.warning(
+                    f"⚠️ Delete **{len(ids_to_del_e)}** email draft(s)? "
+                    f"Gmail drafts will also be removed. This cannot be undone."
+                )
+                de1, de2 = st.columns(2)
+                if de1.button("✅ Yes, delete", key="confirm_del_e_yes"):
+                    from app.db import delete_emails, fetch_emails_by_ids
+                    from app.services.gmail_service import delete_draft
+                    rows_to_del = fetch_emails_by_ids(ids_to_del_e)
+                    for row in rows_to_del:
+                        if row.get("gmail_draft_id"):
+                            try:
+                                delete_draft(row["gmail_draft_id"])
+                            except Exception:
+                                pass
+                    n_del_e = delete_emails(ids_to_del_e)
+                    st.session_state.pop("confirm_del_emails", None)
+                    st.success(f"🗑 Deleted {n_del_e} email draft(s).")
+                    st.rerun()
+                if de2.button("Cancel", key="confirm_del_e_no"):
+                    st.session_state.pop("confirm_del_emails", None)
+                    st.rerun()
 
             if "confirm_ids" in st.session_state:
                 ids = st.session_state["confirm_ids"]

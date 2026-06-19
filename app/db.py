@@ -310,6 +310,32 @@ def fetch_emails_by_ids(ids: list[int]) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def delete_contacts(ids: list[int]) -> int:
+    """Delete contacts (and their emails) by ID list. Returns count deleted."""
+    if not ids:
+        return 0
+    conn = get_conn()
+    ph = ",".join("?" * len(ids))
+    conn.execute(f"DELETE FROM emails   WHERE contact_id IN ({ph})", ids)
+    conn.execute(f"DELETE FROM contacts WHERE id         IN ({ph})", ids)
+    conn.commit()
+    deleted = conn.execute("SELECT changes()").fetchone()[0]
+    conn.close()
+    return len(ids)
+
+
+def delete_emails(ids: list[int]) -> int:
+    """Delete email records by ID list. Returns count deleted."""
+    if not ids:
+        return 0
+    conn = get_conn()
+    ph = ",".join("?" * len(ids))
+    conn.execute(f"DELETE FROM emails WHERE id IN ({ph})", ids)
+    conn.commit()
+    conn.close()
+    return len(ids)
+
+
 def get_all_stats() -> dict:
     conn = get_conn()
     def n(sql):
