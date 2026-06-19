@@ -1641,13 +1641,14 @@ elif page == "  ⚙️   Settings":
         st.markdown("""
 <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;
             padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7;margin-bottom:1rem">
-<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v2.2.0</div>
+<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v2.3.0</div>
+<div>✅ <b>Update system fully working</b> — app restarts automatically after Update Now, loading all new code</div>
 <div>✅ <b>Delete Contacts</b> — select contacts and delete them (+ their emails) from the Contacts page</div>
 <div>✅ <b>Delete Email Drafts</b> — remove draft emails from Gmail and the database in one click</div>
-<div>✅ <b>Update system fixed</b> — version number now updates correctly after every Update Now</div>
-<div>✅ <b>Double-click fixed</b> — closing the browser and reopening always works</div>
-<div>✅ <b>Gmail sign-in fixed</b> — OAuth works inside the packaged .app</div>
-<div>✅ <b>All workers fixed</b> — Find / Scrape / Qualify / Write Emails / Create Drafts all working</div>
+<div>✅ <b>Double-click always works</b> — closing the browser and reopening works every time</div>
+<div>✅ <b>Gmail sign-in works</b> — OAuth works inside the packaged .app</div>
+<div>✅ <b>All pipeline steps work</b> — Find / Scrape / Qualify / Write Emails / Create Drafts all working</div>
+<div>✅ <b>Yirra Care logo</b> — app icon uses the Yirra Care branding</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1675,17 +1676,21 @@ elif page == "  ⚙️   Settings":
                         st.code(out_txt.strip()[:400])
             if all_ok:
                 os.chdir(str(ROOT))
-                # Read the real new version directly from the updated file on disk
                 try:
                     new_ver = (ROOT / "version.txt").read_text().strip()
                 except Exception:
                     new_ver = "latest"
-                st.success(f"🎉 **Update complete!** Now on **v{new_ver}** — reloading in 3 seconds…")
-                time.sleep(3)
-                # Full browser page reload — creates a completely fresh Streamlit session
-                # so the new version.txt and dashboard.py are picked up correctly.
-                import streamlit.components.v1 as _stc
-                _stc.html("<script>window.location.reload();</script>", height=0)
+                st.success(f"🎉 **Update complete!** Now on **v{new_ver}**")
+                st.info("⏳ The app will restart in 4 seconds to load the new code…")
+                time.sleep(4)
+                # Kill this Streamlit server process so the launcher restarts it
+                # fresh — this is the only way to guarantee the new dashboard.py
+                # (with updated changelog, new features, etc.) is fully loaded.
+                # The launcher detects the server is gone and starts a new one.
+                import signal
+                PORT_FILE = Path.home() / ".yirracare.port"
+                PORT_FILE.unlink(missing_ok=True)
+                os.kill(os.getpid(), signal.SIGTERM)
             else:
                 st.warning(
                     "⚠️ Update partially failed. "
