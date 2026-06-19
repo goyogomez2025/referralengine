@@ -1311,8 +1311,22 @@ elif page == "  👥   Contacts":
             unsafe_allow_html=True
         )
     else:
+        # Persistent selection — survives filter changes and reruns
+        if "c_sel_ids" not in st.session_state:
+            st.session_state["c_sel_ids"] = []
+
         sel_df = df.copy()
-        sel_df.insert(0, "select", False)
+        sel_df.insert(0, "select", sel_df["id"].isin(st.session_state["c_sel_ids"]))
+
+        # ── Select All / Clear row ──
+        sa1, sa2, sa_info = st.columns([1.5, 1.5, 8])
+        if sa1.button("☑ Select All", key="sel_all_c", use_container_width=True):
+            st.session_state["c_sel_ids"] = df["id"].tolist()
+            st.rerun()
+        if sa2.button("☐ Clear", key="sel_none_c", use_container_width=True):
+            st.session_state["c_sel_ids"] = []
+            st.rerun()
+
         edited_contacts = st.data_editor(
             sel_df,
             column_config={
@@ -1329,7 +1343,9 @@ elif page == "  👥   Contacts":
             use_container_width=True, hide_index=True, height=480,
             key="contacts_editor",
         )
+        # Sync checkbox state back so it survives reruns
         selected_contact_ids = df[edited_contacts["select"]]["id"].tolist()
+        st.session_state["c_sel_ids"] = selected_contact_ids
         n_contacts_sel = len(selected_contact_ids)
 
         cd1, cd2, cd3 = st.columns([2, 2, 3])
@@ -1356,6 +1372,7 @@ elif page == "  👥   Contacts":
                 from app.db import delete_contacts
                 n_del = delete_contacts(ids_to_del)
                 st.session_state.pop("confirm_del_contacts", None)
+                st.session_state["c_sel_ids"] = []   # clear selection after delete
                 st.success(f"🗑 Deleted {n_del} contact(s).")
                 st.rerun()
             if y2.button("Cancel", key="confirm_del_c_no"):
@@ -1396,11 +1413,26 @@ elif page == "  ✉️   Emails":
             )
         else:
             df_raw = pd.DataFrame(emails)
-            df_raw.insert(0, "send", False)
+
+            # Persistent email selection
+            if "e_sel_ids" not in st.session_state:
+                st.session_state["e_sel_ids"] = []
+
+            df_raw.insert(0, "send", df_raw["id"].isin(st.session_state["e_sel_ids"]))
             st.markdown(
                 f'<div class="sec-head">{len(df_raw)} Emails Ready to Send</div>',
                 unsafe_allow_html=True
             )
+
+            # ── Select All / Clear row ──
+            es1, es2, _es3 = st.columns([1.5, 1.5, 8])
+            if es1.button("☑ Select All", key="sel_all_e", use_container_width=True):
+                st.session_state["e_sel_ids"] = df_raw["id"].tolist()
+                st.rerun()
+            if es2.button("☐ Clear", key="sel_none_e", use_container_width=True):
+                st.session_state["e_sel_ids"] = []
+                st.rerun()
+
             edited = st.data_editor(
                 df_raw[["send","organisation","recipient_email","subject","status","qualification_score"]],
                 column_config={
@@ -1418,6 +1450,7 @@ elif page == "  ✉️   Emails":
             )
 
             selected_ids = df_raw[edited["send"]]["id"].tolist()
+            st.session_state["e_sel_ids"] = selected_ids   # sync back
             n_sel        = len(selected_ids)
 
             # ── Email preview (single selection) ──
@@ -1476,6 +1509,7 @@ elif page == "  ✉️   Emails":
                                 pass
                     n_del_e = delete_emails(ids_to_del_e)
                     st.session_state.pop("confirm_del_emails", None)
+                    st.session_state["e_sel_ids"] = []   # clear selection after delete
                     st.success(f"🗑 Deleted {n_del_e} email draft(s).")
                     st.rerun()
                 if de2.button("Cancel", key="confirm_del_e_no"):
