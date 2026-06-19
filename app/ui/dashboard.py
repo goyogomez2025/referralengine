@@ -1641,13 +1641,13 @@ elif page == "  ⚙️   Settings":
         st.markdown("""
 <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;
             padding:.9rem 1.1rem;color:#111827;font-size:.88rem;line-height:1.7;margin-bottom:1rem">
-<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v1.5.0</div>
-<div>✅ <b>Update system verified</b> — end-to-end update flow confirmed working</div>
-<div>✅ <b>Fixed double-click crash</b> — app no longer shows "not open anymore" after closing browser</div>
-<div>✅ <b>Fixed Gmail sign-in</b> — OAuth now works inside the packaged .app</div>
-<div>✅ <b>Fixed all workers</b> — Find / Scrape / Qualify / Write Emails / Create Drafts all working</div>
-<div>✅ <b>Yirra Care logo</b> applied as app icon</div>
-<div>✅ <b>Fixed crash after update</b> — app no longer breaks after running Update Now</div>
+<div style="font-weight:700;color:#14532D;margin-bottom:.5rem">📋 What's new in v2.2.0</div>
+<div>✅ <b>Delete Contacts</b> — select contacts and delete them (+ their emails) from the Contacts page</div>
+<div>✅ <b>Delete Email Drafts</b> — remove draft emails from Gmail and the database in one click</div>
+<div>✅ <b>Update system fixed</b> — version number now updates correctly after every Update Now</div>
+<div>✅ <b>Double-click fixed</b> — closing the browser and reopening always works</div>
+<div>✅ <b>Gmail sign-in fixed</b> — OAuth works inside the packaged .app</div>
+<div>✅ <b>All workers fixed</b> — Find / Scrape / Qualify / Write Emails / Create Drafts all working</div>
 </div>
 """, unsafe_allow_html=True)
 
