@@ -1055,39 +1055,40 @@ elif page == "  🎯   Campaigns":
             locations_str = ", ".join(c.get("locations", [])) or "—"
             queries_list  = c.get("queries", [])
 
-            st.markdown(f"""
-            <div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:16px;
-                        padding:1.3rem 1.5rem 1.1rem;margin-bottom:1rem;
-                        box-shadow:0 1px 4px rgba(0,0,0,.06)">
-              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem">
-                <span style="font-size:1.05rem;font-weight:800;color:#111827">
-                  {c.get("name", c["id"])}
-                </span>
-                {industry_badge}
-                {niche_badge}
-                {tone_badge}
-                {status_badge}
-              </div>
-              {sender_line}
-              <div style="font-size:.88rem;color:#374151;margin-bottom:.2rem">
-                <b>Service:</b> {c.get("service","—")}
-              </div>
-              {vp_line}
-              <div style="font-size:.88rem;color:#374151;margin-bottom:.6rem">
-                <b>Locations:</b> {locations_str}
-              </div>
-              <div style="font-size:.82rem;font-weight:700;color:#6B7280;
-                          text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">
-                Search Queries ({len(queries_list)})
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px">
-                {"".join(
-                    f'<span style="background:#F0FDF4;color:#14532D;border-radius:8px;'
-                    f'padding:.25rem .65rem;font-size:.82rem;border:1px solid #BBF7D0">{q}</span>'
-                    for q in queries_list
-                )}
-              </div>
-            </div>""", unsafe_allow_html=True)
+            query_tags = "".join(
+                f'<span style="background:#F0FDF4;color:#14532D;border-radius:8px;'
+                f'padding:.25rem .65rem;font-size:.82rem;border:1px solid #BBF7D0">{q}</span>'
+                for q in queries_list
+            )
+            # Build card HTML as a flat string — no leading spaces so Markdown
+            # doesn't treat it as a code block (4+ spaces = code block in CommonMark)
+            card_html = (
+                '<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:16px;'
+                'padding:1.3rem 1.5rem 1.1rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,.06)">'
+
+                '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem">'
+                f'<span style="font-size:1.05rem;font-weight:800;color:#111827">{c.get("name", c["id"])}</span>'
+                + industry_badge + niche_badge + tone_badge + status_badge +
+                '</div>'
+
+                + sender_line
+
+                + f'<div style="font-size:.88rem;color:#374151;margin-bottom:.2rem">'
+                  f'<b>Service:</b> {c.get("service","—")}</div>'
+
+                + vp_line
+
+                + f'<div style="font-size:.88rem;color:#374151;margin-bottom:.6rem">'
+                  f'<b>Locations:</b> {locations_str}</div>'
+
+                + f'<div style="font-size:.82rem;font-weight:700;color:#6B7280;text-transform:uppercase;'
+                  f'letter-spacing:.06em;margin-bottom:.4rem">Search Queries ({len(queries_list)})</div>'
+
+                + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+                + query_tags
+                + '</div></div>'
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
 
             bc1, bc2, bc3 = st.columns([2, 2, 8])
             if bc1.button("✏️ Edit",   key=f"e_{c['id']}"):
