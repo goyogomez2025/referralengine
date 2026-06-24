@@ -1,6 +1,7 @@
 from app.config import settings
 from app.db import upsert_prospect
 from app.services.search_service import search_web
+import time, random
 
 DEFAULT_QUERIES = [
     "NDIS support coordinator Brisbane email",
@@ -28,7 +29,12 @@ def run(query: str | None = None, limit: int | None = None, campaign_id: str | N
 
     total = 0
     limit = limit or settings.max_contacts_per_query
-    for q in queries:
+    for i, q in enumerate(queries):
+        # Space out requests to avoid DuckDuckGo rate limiting:
+        # 1.5–3s between each query (skip delay on the first one)
+        if i > 0:
+            time.sleep(random.uniform(1.5, 3.0))
+
         results = search_web(q, limit=limit)
         for r in results:
             upsert_prospect(q, r["title"], r["url"], r.get("snippet", ""))

@@ -36,26 +36,58 @@ def _search_google_cse(query: str, limit: int = 20) -> list[dict]:
 
 
 def _search_ddgs(query: str, limit: int = 20) -> list[dict]:
-    """DuckDuckGo search – free, no key required."""
+    """
+    DuckDuckGo search – free, no key required.
+    Retries up to 4 times with exponential back-off to handle DDGSException
+    (rate-limit / 'No results found' transient errors).
+    Returns an empty list rather than raising, so a single bad query never
+    crashes the whole Find step.
+    """
+    import time, random
+
     try:
         from ddgs import DDGS
-    except ImportError as exc:
-        raise RuntimeError(
-            "Missing dependency 'ddgs'. Run: pip install -r requirements.txt"
-        ) from exc
+        from ddgs.exceptions import DDGSException
+    except ImportError:
+        try:
+            from duckduckgo_search import DDGS
+            DDGSException = Exception
+        except ImportError as exc:
+            raise RuntimeError(
+                "Missing dependency 'ddgs'. Run: pip install -r requirements.txt"
+            ) from exc
 
-    results: list[dict] = []
-    with DDGS() as ddgs:
-        for item in ddgs.text(query, max_results=limit):
-            url = item.get("href") or item.get("url")
-            if not url:
-                continue
-            results.append({
-                "title": item.get("title", ""),
-                "url": url,
-                "snippet": item.get("body", ""),
-            })
-    return results
+    max_attempts = 4
+    for attempt in range(1, max_attempts + 1):
+        try:
+            results: list[dict] = []
+            with DDGS() as ddgs:
+                for item in ddgs.text(query, max_results=limit):
+                    url = item.get("href") or item.get("url") or item.get("link")
+                    if not url:
+                        continue
+                    results.append({
+                        "title":   item.get("title", ""),
+                        "url":     url,
+                        "snippet": item.get("body", item.get("snippet", "")),
+                    })
+            return results
+
+        except DDGSException as exc:
+            msg = str(exc).lower()
+            if attempt < max_attempts:
+                # Back off: 2s, 5s, 12s (+jitter) then give up
+                wait = (2 ** attempt) + random.uniform(0, 1.5)
+                time.sleep(wait)
+            else:
+                # All retries exhausted — return empty so the caller continues
+                return []
+
+        except Exception:
+            # Any other unexpected error — bail out gracefully
+            return []
+
+    return []
 
 
 def search_web(query: str, limit: int = 20) -> list[dict]:
